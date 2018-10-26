@@ -1,0 +1,7 @@
+/home/yujie6/lightning/CMakeFiles/install/strip.dir
+/home/yujie6/lightning/CMakeFiles/edit_cache.dir
+/home/yujie6/lightning/CMakeFiles/STG_Game.dir
+/home/yujie6/lightning/CMakeFiles/list_install_components.dir
+/home/yujie6/lightning/CMakeFiles/install/local.dir
+/home/yujie6/lightning/CMakeFiles/rebuild_cache.dir
+/home/yujie6/lightning/CMakeFiles/install.dir
