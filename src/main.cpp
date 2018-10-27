@@ -1,13 +1,6 @@
 #include "SDL2_header.h"
 
-#include <cstdio>
-#include <map>
-#include <cstdlib>
-#include <ctime>
-#include <random>
-#include <sstream>
-#include <string>
-
+#include<bits/stdc++.h>
 
 const int Game::SCREEN_WIDTH	= 960;
 const int Game::SCREEN_HEIGHT	= 720;
@@ -22,7 +15,7 @@ std::uniform_int_distribution<unsigned>u (50,SCREEN_WIDTH-50);
 //
 PointD posPlayer, velocityPlayer;
 PointD posEnemy[10], velocityEnemy;
-PointD posBullet[20], velocityBullet,  posEnemyBullet[20], velocityEnemyBullet;
+PointD posBullet[20], velocityBullet,  posEnemyBullet[20], velocityEnemyBullet, velocityboss;
 struct Object{
 int width;
 int height;
@@ -30,13 +23,13 @@ PointD pos;
 bool out;};
 bool outbullet[20], outenemybullet[20], flag = true;
 int enemyNumber, imageNumber, i, newplace[10], spacetime = 0, spacebullet, superweapen;
-int score = 0, block[10], lives = 3, timeoff = 0, checkpoint;
+int score = 0, block[10], lives = 3, timeoff = 0, checkpoint, check[3], bossblock;
 double speedPlayer;
-Object SWplus, liveplus, bulletplus, morebullet[20], enemy1bullet[20], moremorebullet[20];
+Object SWplus, liveplus, bulletplus, morebullet[20], enemy1bullet[20], moremorebullet[20], enemy2bullet[20], boom[3], boss;
 std::string to_string (int val);
 bool bulletok;
 Image *imagePlayer, *imageBullet, *imageEnemy, *imageboom, *images[100], *imageliveplus,*imageSWplus,*imageBulletplus, *imageenemybullet;
-
+Image *imageboomenemy, *imageboss;
 void loadPictures()
 {
 	imagePlayer = loadImage( "player.png"	);
@@ -47,6 +40,9 @@ void loadPictures()
 	imageliveplus = loadImage( "liveplus.png" );
 	imageSWplus = loadImage( "SWplus.png" );
 	imageBulletplus = loadImage("bulletplus.png");
+	imageBulletplus = loadImage("bulletplus.png");
+	imageboomenemy = loadImage( "boomenemy.png" );
+	imageboss = loadImage("boss.png");
 }
 
 void initialize()
@@ -59,10 +55,11 @@ void initialize()
 	posEnemy[1] = PointD( SCREEN_WIDTH/2-200, 0);
 	posEnemy[0] = PointD( SCREEN_WIDTH/2, 0);
 	posEnemy[2] = PointD( SCREEN_WIDTH/2+200, 0);
-	for (i = 0; i< 20; i++) {outbullet[i] = false; outenemybullet[i] = false;}
+	for (i = 0; i< 20; i++) {outbullet[i] = false; outenemybullet[i] = false; enemy1bullet[i].out=false;enemy2bullet[i].out=false;}
 	velocityBullet = PointD(0, -7);
 	velocityEnemyBullet = PointD(0, 5);
 	velocityEnemy = PointD(0, 2);
+	velocityboss = PointD(0, 1);
 	spacebullet = 0;
 	enemyNumber = 1;
 	speedPlayer = 5;
@@ -72,12 +69,27 @@ void initialize()
     liveplus.out = false;
     bulletplus.out = false;
     bulletok = false;
+    boss.pos = PointD(SCREEN_WIDTH/2, 0);
+    boss.out = false;
+    bossblock = 50;
 	//Load pictures from files
 	loadPictures();
 	getImageSize(imageliveplus,liveplus.width,liveplus.height);
 	getImageSize(imageSWplus,SWplus.width,SWplus.height);
     getImageSize(imageBulletplus,bulletplus.width,bulletplus.height);
-
+    getImageSize(imageboss,boss.width,boss.height);
+    /*
+    Mix_OpenAudio(-1,40000,16,128);
+    //Mix_OpenAudio()
+    char *address,*music="bgm.mp3";
+    std::string a=RES_PATH_IMG;
+    std::stringstream ss;
+    ss << a;
+    ss >> address;
+    strcpy(address,music);
+    Mix_Music* bgm=Mix_LoadMUS(address);
+    Mix_PlayMusic(bgm,-1);
+    */
 }
 
 void drawPlayer()
@@ -116,8 +128,9 @@ void drawBullet()
 {
 	int w,h;
 	getImageSize( imageBullet, w, h );
+	//player's bullet
 	for (i = 0; i < 20; i++){
-	if(outbullet[i])
+        if(outbullet[i])
         {drawImage( imageBullet, posBullet[i].x-w/2, posBullet[i].y-h);}
     }
     if (bulletok)
@@ -127,6 +140,7 @@ void drawBullet()
             {drawImage( imageBullet, morebullet[i].pos.x-w/2, morebullet[i].pos.y-h);}
         }
     }
+    //enemy's bullet
     for (i = 0; i < 20; i++){
 	if(outenemybullet[i])
         {drawImage( imageenemybullet, posEnemyBullet[i].x-w/2, posEnemyBullet[i].y-h);}
@@ -135,6 +149,10 @@ void drawBullet()
 	if(enemy1bullet[i].out)
         {drawImage( imageenemybullet, enemy1bullet[i].pos.x-w/2, enemy1bullet[i].pos.y-h);}
     }
+    for (i = 0; i < 20; i++){
+	if(enemy2bullet[i].out)
+        {drawImage( imageenemybullet, enemy2bullet[i].pos.x-w/2, enemy2bullet[i].pos.y-h);}
+    }
 }
 void drawEnemy()
 {
@@ -142,6 +160,16 @@ void drawEnemy()
 	getImageSize( imageEnemy, w, h );
 	for (i = 0; i < 3; i++){
 	drawImage( imageEnemy, posEnemy[i].x-w/2, posEnemy[i].y-h/2 , 1, 1, 180);
+	}
+	for (i = 0; i < 3; i++){
+	if (boom[i].out){
+        drawImage( imageboomenemy, boom[i].pos.x-w/2, boom[i].pos.y-h/2, 0.15, 0.15);
+        if (timeoff > check[i] + 30) boom[i].out = false;
+                }
+	}
+	if (boss.out)
+	{
+        drawImage( imageboss, boss.pos.x-boss.width/2 , boss.pos.y-boss.height/2, 1, 1, 180);
 	}
 }
 void drawtool()
@@ -210,6 +238,11 @@ void deal()
         {
             enemy1bullet[i].out = false;
         }
+        for (i = 0; i < 20; i++)
+        {
+            enemy2bullet[i].out = false;
+        }
+        bossblock -= 20;
 	}
 	if( keyboard[KEY_SPACE])
 	{
@@ -269,9 +302,14 @@ void deal()
                 if (!enemy1bullet[i].out)
                 {enemy1bullet[i].pos = posEnemy[1]; enemy1bullet[i].out = true; break;}
             }
-            spacebullet = (spacebullet+1) % 60;
+            for (int i = 0; i < 20; i++)
+            {
+                if (!enemy2bullet[i].out)
+                {enemy2bullet[i].pos = posEnemy[2]; enemy2bullet[i].out = true; break;}
+            }
+            spacebullet = (spacebullet+1) % 80;
         }
-    else {spacebullet = (spacebullet+1) % 60; }
+    else {spacebullet = (spacebullet+1) % 80; }
     //player's bullet move foward
     for (i = 0; i < 20; i++)
     {
@@ -299,15 +337,22 @@ void deal()
             posEnemyBullet[i] = posEnemyBullet[i] + velocityEnemyBullet;
             if (posEnemyBullet[i].y > SCREEN_HEIGHT)
                 {outenemybullet[i] = false; posEnemyBullet[i].y = 0;}
-            if (posEnemyBullet[i].y > posPlayer.y-h/2&& posEnemyBullet[i].x < posPlayer.x+w/2&& posEnemyBullet[i].x> posPlayer.x-w/2)
+            if (posEnemyBullet[i].y > posPlayer.y-h/2&& posEnemyBullet[i].x < posPlayer.x+w/2&& posEnemyBullet[i].x> posPlayer.x-w/2&&posEnemyBullet[i].y < posPlayer.y+h/2)
                 {outenemybullet[i] = false; posEnemyBullet[i].y = 0;lives--; bulletok = false; break;}
         }
         if (enemy1bullet[i].out){
             enemy1bullet[i].pos = enemy1bullet[i].pos + velocityEnemyBullet;
             if (enemy1bullet[i].pos.y > SCREEN_HEIGHT)
                 {enemy1bullet[i].out = false; enemy1bullet[i].pos.y = 0;}
-            if (enemy1bullet[i].pos.y > posPlayer.y-h/2&& enemy1bullet[i].pos.x < posPlayer.x+w/2&& enemy1bullet[i].pos.x> posPlayer.x-w/2)
+            if (enemy1bullet[i].pos.y > posPlayer.y-h/2&& enemy1bullet[i].pos.x < posPlayer.x+w/2&& enemy1bullet[i].pos.x> posPlayer.x-w/2&&enemy1bullet[i].pos.y < posPlayer.y+h/2)
                 {enemy1bullet[i].out = false; enemy1bullet[i].pos.y = 0;lives--; bulletok = false; break;}
+        }
+        if (enemy2bullet[i].out){
+            enemy2bullet[i].pos = enemy2bullet[i].pos + velocityEnemyBullet;
+            if (enemy2bullet[i].pos.y > SCREEN_HEIGHT)
+                {enemy2bullet[i].out = false; enemy2bullet[i].pos.y = 0;}
+            if (enemy2bullet[i].pos.y > posPlayer.y-h/2&& enemy2bullet[i].pos.x < posPlayer.x+w/2&& enemy2bullet[i].pos.x> posPlayer.x-w/2&&enemy2bullet[i].pos.y <posPlayer.y+h/2)
+                {enemy2bullet[i].out = false; enemy2bullet[i].pos.y = 0;lives--; bulletok = false; break;}
         }
     }
     // get enemy shot
@@ -315,12 +360,17 @@ void deal()
     {
         if (outbullet[i])
         {
-            if (posBullet[i].x < posEnemy[0].x+w/2 &&posBullet[i].x> posEnemy[0].x-w/2 && posBullet[i].y < posEnemy[0].y + h/2)
+            if (posBullet[i].x < posEnemy[0].x+w/2 &&posBullet[i].x> posEnemy[0].x-w/2 && posBullet[i].y < posEnemy[0].y + h/2&&posBullet[i].y > posEnemy[0].y - h/2)
             {outbullet[i] = false; block[0]++;}
-            if (posBullet[i].x < posEnemy[1].x+w/2 &&posBullet[i].x> posEnemy[1].x-w/2 && posBullet[i].y < posEnemy[1].y + h/2)
+            if (posBullet[i].x < posEnemy[1].x+w/2 &&posBullet[i].x> posEnemy[1].x-w/2 && posBullet[i].y < posEnemy[1].y + h/2&&posBullet[i].y > posEnemy[1].y - h/2)
             {outbullet[i] = false; block[1]++;}
-            if (posBullet[i].x < posEnemy[2].x+w/2 &&posBullet[i].x> posEnemy[2].x-w/2 && posBullet[i].y < posEnemy[2].y + h/2)
+            if (posBullet[i].x < posEnemy[2].x+w/2 &&posBullet[i].x> posEnemy[2].x-w/2 && posBullet[i].y < posEnemy[2].y + h/2&&posBullet[i].y > posEnemy[2].y - h/2)
             {outbullet[i] = false; block[2]++;}
+            if(boss.out)
+            {
+                if(posBullet[i].x<boss.pos.x+boss.width/2&&posBullet[i].x>boss.pos.x-boss.width/2&&posBullet[i].y<boss.pos.y+boss.height/2&&posBullet[i].y>boss.pos.y-boss.height/2)
+                {outbullet[i] = false; bossblock--;}
+            }
         }
     }
     if (bulletok)
@@ -329,12 +379,17 @@ void deal()
         {
             if (morebullet[i].out)
             {
-                if (morebullet[i].pos.x < posEnemy[0].x+w/2 &&morebullet[i].pos.x> posEnemy[0].x-w/2 && morebullet[i].pos.y < posEnemy[0].y + h/2)
+                if (morebullet[i].pos.x < posEnemy[0].x+w/2 &&morebullet[i].pos.x> posEnemy[0].x-w/2 && morebullet[i].pos.y < posEnemy[0].y + h/2&&morebullet[i].pos.y > posEnemy[0].y - h/2)
                 {morebullet[i].out = false; block[0]++;}
-                if (morebullet[i].pos.x < posEnemy[1].x+w/2 &&morebullet[i].pos.x> posEnemy[1].x-w/2 && morebullet[i].pos.y < posEnemy[1].y + h/2)
+                if (morebullet[i].pos.x < posEnemy[1].x+w/2 &&morebullet[i].pos.x> posEnemy[1].x-w/2 && morebullet[i].pos.y < posEnemy[1].y + h/2&&morebullet[i].pos.y > posEnemy[1].y - h/2)
                 {morebullet[i].out = false; block[1]++;}
-                if (morebullet[i].pos.x < posEnemy[1].x+w/2 &&morebullet[i].pos.x> posEnemy[1].x-w/2 && morebullet[i].pos.y < posEnemy[1].y + h/2)
-                {morebullet[i].out = false; block[1]++;}
+                if (morebullet[i].pos.x < posEnemy[2].x+w/2 &&morebullet[i].pos.x> posEnemy[2].x-w/2 && morebullet[i].pos.y < posEnemy[2].y + h/2&&morebullet[i].pos.y > posEnemy[2].y - h/2)
+                {morebullet[i].out = false; block[2]++;}
+                if(boss.out)
+                {
+                    if(morebullet[i].pos.x<boss.pos.x+boss.width/2&&morebullet[i].pos.x>boss.pos.x-boss.width/2&&morebullet[i].pos.y<boss.pos.y+boss.height/2&&morebullet[i].pos.y>boss.pos.y-boss.height/2)
+                    {morebullet[i].out = false; bossblock--;}
+                }
             }
     }
 
@@ -346,10 +401,15 @@ void deal()
         posEnemy[i] = PointD(newplace[i], 0);
         block[i] = 0;
 	} }
+
 	//determine scores to get tools out
+	if(bossblock <= 0){score += 50; boss.out = false; lives++; bossblock = 50;}
 	for (i = 0; i < 3; i++){
 	if (block[i] <= 4 ) {posEnemy[i] = posEnemy[i] + velocityEnemy;}
     else {
+        boom[i].out = true;
+        boom[i].pos = posEnemy[i];
+        check[i] = timeoff;
         score += 5;
         if (score % 40 == 0)
         {
@@ -374,6 +434,14 @@ void deal()
         block[i] = 0;
     }
     }
+    //get boss
+    if (boss.out)
+    {
+        if(posPlayer.x<boss.pos.x+(boss.width)/2&&posPlayer.x>boss.pos.x-(boss.width)/2&&posPlayer.y<boss.pos.y+(boss.height)/2&&posPlayer.y>boss.pos.y-(boss.height)/2)
+        {lives--;}
+        boss.pos = boss.pos + velocityboss;
+    }
+    //get tool
     if (SWplus.out)
     {
         if (posPlayer.x<SWplus.pos.x +w/2&& posPlayer.x+w/2>SWplus.pos.x&&posPlayer.y+h/2>SWplus.pos.y&&posPlayer.y>SWplus.pos.y+h/2)
@@ -443,6 +511,10 @@ int work( bool &quit )
 	getImageSize( text2, w, h );
 	drawImage( text2, SCREEN_WIDTH/2-w/2, SCREEN_HEIGHT/2 - h/2);
     }
+    if (timeoff == 600) {boss.out = true;}
+    if (timeoff == 2400) {boss.out = true; boss.pos = PointD(SCREEN_WIDTH/4, 0); bossblock = 80; velocityboss = PointD(0.3, 0.7);}
+    if (timeoff == 4200) {boss.out = true; boss.pos = PointD(SCREEN_WIDTH/2, 0); bossblock = 120; velocityboss = PointD(0, 0.5);}
+    //if (bossblock <= 0) {boss.out = false;}
 
 	if( keyboard[KEY_ESC] )
 		quit = true;

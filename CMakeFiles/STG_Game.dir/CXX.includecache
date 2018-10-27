@@ -17,19 +17,7 @@ SDL2_header.h
 /home/yujie6/lightning/src/main.cpp
 SDL2_header.h
 /home/yujie6/lightning/src/SDL2_header.h
-cstdio
--
-map
--
-cstdlib
--
-ctime
--
-random
--
-sstream
--
-string
+bits/stdc++.h
 -
 
 include/SDL2_header.h
