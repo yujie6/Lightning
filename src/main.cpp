@@ -1,5 +1,4 @@
 #include "SDL2_header.h"
-
 #include<bits/stdc++.h>
 
 const int Game::SCREEN_WIDTH	= 960;
@@ -11,21 +10,22 @@ using namespace Game;
 std::map<int, bool> keyboard;
 
 std::default_random_engine e;
-std::uniform_int_distribution<unsigned>u (50,SCREEN_WIDTH-50);
-//
+std::uniform_int_distribution<unsigned>u (50,SCREEN_WIDTH-50); //get random position
+
 PointD posPlayer, velocityPlayer;
 PointD posEnemy[10], velocityEnemy;
-PointD posBullet[20], velocityBullet,  posEnemyBullet[20], velocityEnemyBullet, velocityboss;
+PointD posBullet[20], velocityBullet, posEnemyBullet[20], velocityEnemyBullet, velocityboss;//original bullet
+//the most frequently used one
 struct Object{
 int width;
 int height;
 PointD pos;
 bool out;};
-bool outbullet[20], outenemybullet[20], flag = true;
+bool outbullet[20], outenemybullet[20], flag = true; //the situation of origianl bullet
 int enemyNumber, imageNumber, i, newplace[10], spacetime = 0, spacebullet, superweapen;
-int score = 0, block[10], lives = 3, timeoff = 0, checkpoint, check[3], bossblock;
+int score = 0, block[10], lives = 3, timeoff = 0, checkpoint, check[3], bossblock;//block is lives of enemy
 double speedPlayer;
-Object SWplus, liveplus, bulletplus, morebullet[20], enemy1bullet[20], moremorebullet[20], enemy2bullet[20], boom[3], boss;
+Object SWplus, liveplus, bulletplus, morebullet[20], enemy1bullet[20], moremorebullet[20], enemy2bullet[20], boom[3], boss, bossbullet[20], bossbullet1[20];
 std::string to_string (int val);
 bool bulletok;
 Image *imagePlayer, *imageBullet, *imageEnemy, *imageboom, *images[100], *imageliveplus,*imageSWplus,*imageBulletplus, *imageenemybullet;
@@ -78,38 +78,22 @@ void initialize()
 	getImageSize(imageSWplus,SWplus.width,SWplus.height);
     getImageSize(imageBulletplus,bulletplus.width,bulletplus.height);
     getImageSize(imageboss,boss.width,boss.height);
-    /*
-    Mix_OpenAudio(-1,40000,16,128);
-    //Mix_OpenAudio()
-    char *address,*music="bgm.mp3";
-    std::string a=RES_PATH_IMG;
-    std::stringstream ss;
-    ss << a;
-    ss >> address;
-    strcpy(address,music);
-    Mix_Music* bgm=Mix_LoadMUS(address);
-    Mix_PlayMusic(bgm,-1);
-    */
 }
 
 void drawPlayer()
 {
 	int w,h;
 	getImageSize( imagePlayer, w, h );
-	if (lives>=4) drawImage( imagePlayer, posPlayer.x-w/2, posPlayer.y-h/2 );//
+	if (lives>=4) drawImage( imagePlayer, posPlayer.x-w/2, posPlayer.y-h/2 );//change the apperence
 	else drawImage(imageboom, posPlayer.x-w/2, posPlayer.y-h/2);
 }
 void drawBackground()
 {
 	Rect rect = {70, 50, 80, 90};
 
-	//	Pay attention:
-	//		(Color){255,255,0} means (Color){255,255,0,0}
-	//		and means you will draw transparent
 	setPenColor((Color){255, 255, 0, 255});
 
 	drawRect( rect, true );
-
 }
 void drawHint()
 {
@@ -117,7 +101,7 @@ void drawHint()
 	Image *text = textToImage( "< Your score: >" + std::to_string(score)  , 35, (Color){64, 224, 208, 255} );
 	Image *text1 = textToImage( "< Your lives : >" + std::to_string(lives) , 35, (Color){64, 224, 208, 255} );
 	int w,h;
-	//+'\n'+"Player_one's life:"
+
 	getImageSize( text, w, h );
 	drawImage( text1, SCREEN_WIDTH/2-w/2-100, SCREEN_HEIGHT-h );
 	drawImage( text, SCREEN_WIDTH-w, h);
@@ -153,28 +137,39 @@ void drawBullet()
 	if(enemy2bullet[i].out)
         {drawImage( imageenemybullet, enemy2bullet[i].pos.x-w/2, enemy2bullet[i].pos.y-h);}
     }
+    //boss bullet
+    if (boss.out)
+    {
+        for (i = 0; i < 20; i++){
+            if (bossbullet[i].out)
+            {drawImage( imageenemybullet, bossbullet[i].pos.x-w/2, bossbullet[i].pos.y-h);}
+            if (bossbullet1[i].out)
+            {drawImage( imageenemybullet, bossbullet1[i].pos.x-w/2, bossbullet1[i].pos.y-h);}
+        }
+    }
 }
 void drawEnemy()
 {
 	int w,h;
 	getImageSize( imageEnemy, w, h );
+	//get three enemy
 	for (i = 0; i < 3; i++){
 	drawImage( imageEnemy, posEnemy[i].x-w/2, posEnemy[i].y-h/2 , 1, 1, 180);
 	}
+	//get the image of boom!
 	for (i = 0; i < 3; i++){
 	if (boom[i].out){
         drawImage( imageboomenemy, boom[i].pos.x-w/2, boom[i].pos.y-h/2, 0.15, 0.15);
         if (timeoff > check[i] + 30) boom[i].out = false;
                 }
 	}
-	if (boss.out)
-	{
-        drawImage( imageboss, boss.pos.x-boss.width/2 , boss.pos.y-boss.height/2, 1, 1, 180);
-	}
+	// get boss out
+	if (boss.out) {drawImage( imageboss, boss.pos.x-boss.width/2 , boss.pos.y-boss.height/2, 1, 1, 180);}
 }
 void drawtool()
 {
     int w, h;
+    //get three special tools
     if (SWplus.out){
     getImageSize( imageSWplus, w, h );
 	drawImage( imageSWplus, SWplus.pos.x-w/2, SWplus.pos.y-h/2 , 1, 1);
@@ -200,11 +195,10 @@ void draw()
 }
 void deal()
 {
-    //int i = 0;
 	bool move = false;
 	int w,h;
 	getImageSize( imagePlayer, w, h );
-	//Calculate velocity
+	//move
 	if( keyboard[KEY_UP]	|| keyboard['w'] )
 	{
 		velocityPlayer = velocityPlayer + PointD(0,-1)*speedPlayer;
@@ -225,6 +219,7 @@ void deal()
 		velocityPlayer = velocityPlayer + PointD(+1,0)*speedPlayer;
 		move = true;
 	}
+	// get superweapon
 	if( keyboard['f'] && superweapen > 0 && timeoff > checkpoint + 120)
 	{
         checkpoint = timeoff;
@@ -242,39 +237,45 @@ void deal()
         {
             enemy2bullet[i].out = false;
         }
-        bossblock -= 20;
+        for (i = 0; i < 20; i++)
+        {
+            bossbullet[i].out = false;
+        }
+        for (i = 0; i < 20; i++)
+        {
+            bossbullet1[i].out = false;
+        }
+        if(boss.out) bossblock -= 50; //hit boss
 	}
+	//shoot
 	if( keyboard[KEY_SPACE])
 	{
+        //control ratio by mod15, spacetime is used to check the time passed
         if (spacetime == 0){
-        //velocityBullet = PointD(0, -20);
-        if (bulletok){
-            for (int i = 0; i < 20; i++)
-            {
-                if (!outbullet[i])
-                {posBullet[i].x = posPlayer.x-w/2;posBullet[i].y = posPlayer.y; outbullet[i] = true; break;}
+            if (bulletok){
+                for (int i = 0; i < 20; i++)
+                {
+                    if (!outbullet[i])
+                    {posBullet[i].x = posPlayer.x-w/2;posBullet[i].y = posPlayer.y; outbullet[i] = true; break;}
+                }
+                for (int i = 0; i < 20; i++)
+                {
+                    if (!morebullet[i].out)
+                    {morebullet[i].pos.x = posPlayer.x+w/2;morebullet[i].pos.y=posPlayer.y; morebullet[i].out = true; break;}
+                }
+                spacetime = (spacetime+1) % 15;
             }
-            for (int i = 0; i < 20; i++)
-            {
-                if (!morebullet[i].out)
-                {morebullet[i].pos.x = posPlayer.x+w/2;morebullet[i].pos.y=posPlayer.y; morebullet[i].out = true; break;}
+            else{
+                for (int i = 0; i < 20; i++)
+                {
+                    if (!outbullet[i])
+                    {posBullet[i] = posPlayer; outbullet[i] = true; break;}
+                }
+                spacetime = (spacetime+1) % 15;
             }
-            spacetime = (spacetime+1) % 15;
         }
-        else{
-            for (int i = 0; i < 20; i++)
-            {
-                if (!outbullet[i])
-                {posBullet[i] = posPlayer; outbullet[i] = true; break;}
-            }
-            spacetime = (spacetime+1) % 15;
-        }
-                            }
         else spacetime = (spacetime+1) % 15;
-
-        //i = i + 1;
 	}
-
 	//Limit player's speed
 	double len = velocityPlayer.length();
 	if( len > speedPlayer )
@@ -282,15 +283,13 @@ void deal()
 		velocityPlayer = velocityPlayer/len*speedPlayer;
 	}
 	//Calculate new position
-
 	PointD newposition;
 	newposition = posPlayer + velocityPlayer;
 	if (newposition.x +w/2 < SCREEN_WIDTH && newposition.x -w/2> 0 && newposition.y+h/2 < SCREEN_HEIGHT && newposition.y-h/2 >0)
         posPlayer = newposition;
-
     //get bullet
     PointD newposBullet[20];
-    //control ratio of bullet
+    //control ratio of enemy's bullet
     if (spacebullet == 0){
             for (int i = 0; i < 20; i++)
             {
@@ -307,6 +306,20 @@ void deal()
                 if (!enemy2bullet[i].out)
                 {enemy2bullet[i].pos = posEnemy[2]; enemy2bullet[i].out = true; break;}
             }
+            //boss's bullet shoot
+            if (boss.out)
+            {
+                for (int i = 0; i < 20; i++)
+                {
+                    if (!bossbullet[i].out)
+                    {bossbullet[i].pos = boss.pos + PointD(50, 0); bossbullet[i].out = true; break;}
+                }
+                for (int i = 0; i < 20; i++)
+                {
+                    if (!bossbullet1[i].out)
+                    {bossbullet1[i].pos = boss.pos - PointD(50, 0); bossbullet1[i].out = true; break;}
+                }
+            }
             spacebullet = (spacebullet+1) % 80;
         }
     else {spacebullet = (spacebullet+1) % 80; }
@@ -319,6 +332,7 @@ void deal()
             {outbullet[i] = false;}
         else posBullet[i] = newposBullet[i];}
     }
+    //player's extra bullet
     if (bulletok)
     {
         for (i = 0; i < 20; i++)
@@ -355,7 +369,29 @@ void deal()
                 {enemy2bullet[i].out = false; enemy2bullet[i].pos.y = 0;lives--; bulletok = false; break;}
         }
     }
+    //boss's bullet mov forward
+    if (boss.out){
+        for (i = 0; i < 20; i++){
+        if (bossbullet[i].out){
+            bossbullet[i].pos = bossbullet[i].pos + PointD(1, 4);
+            if (bossbullet[i].pos.y > SCREEN_HEIGHT)
+                {bossbullet[i].out = false; bossbullet[i].pos.y = 0;}
+            if (bossbullet[i].pos.y > posPlayer.y-h/2&& bossbullet[i].pos.x < posPlayer.x+w/2&& bossbullet[i].pos.x> posPlayer.x-w/2&&bossbullet[i].pos.y <posPlayer.y+h/2)
+                {bossbullet[i].out = false; bossbullet[i].pos.y = 0;lives--; bulletok = false; break;}
+        }
+        }
+        for (i = 0; i < 20; i++){
+        if (bossbullet1[i].out){
+            bossbullet1[i].pos = bossbullet1[i].pos + PointD(-1, 4);
+            if (bossbullet1[i].pos.y > SCREEN_HEIGHT)
+                {bossbullet1[i].out = false; bossbullet1[i].pos.y = 0;}
+            if (bossbullet1[i].pos.y > posPlayer.y-h/2&& bossbullet1[i].pos.x < posPlayer.x+w/2&& bossbullet1[i].pos.x> posPlayer.x-w/2&&bossbullet1[i].pos.y <posPlayer.y+h/2)
+                {bossbullet1[i].out = false; bossbullet1[i].pos.y = 0;lives--; bulletok = false; break;}
+        }
+        }
+    }
     // get enemy shot
+    // player's original bullet
     for (i = 0; i < 20; i++)
     {
         if (outbullet[i])
@@ -373,6 +409,7 @@ void deal()
             }
         }
     }
+    //player's extra bullet
     if (bulletok)
     {
         for (i = 0; i < 20; i++)
@@ -394,14 +431,13 @@ void deal()
     }
 
     }
-    //get enemy
+    //get new enemy
     for (i = 0; i< 3; i++){
     if (posEnemy[i].y > SCREEN_WIDTH)
     {
         posEnemy[i] = PointD(newplace[i], 0);
         block[i] = 0;
 	} }
-
 	//determine scores to get tools out
 	if(bossblock <= 0){score += 50; boss.out = false; lives++; bossblock = 50;}
 	for (i = 0; i < 3; i++){
@@ -411,7 +447,7 @@ void deal()
         boom[i].pos = posEnemy[i];
         check[i] = timeoff;
         score += 5;
-        if (score % 40 == 0)
+        if (score % 40 == 30)
         {
             SWplus.out = true;
             SWplus.pos = posEnemy[i];
@@ -434,17 +470,17 @@ void deal()
         block[i] = 0;
     }
     }
-    //get boss
+    //get boss move forward
     if (boss.out)
     {
         if(posPlayer.x<boss.pos.x+(boss.width)/2&&posPlayer.x>boss.pos.x-(boss.width)/2&&posPlayer.y<boss.pos.y+(boss.height)/2&&posPlayer.y>boss.pos.y-(boss.height)/2)
         {lives--;}
         boss.pos = boss.pos + velocityboss;
     }
-    //get tool
+    //player get tools
     if (SWplus.out)
     {
-        if (posPlayer.x<SWplus.pos.x +w/2&& posPlayer.x+w/2>SWplus.pos.x&&posPlayer.y+h/2>SWplus.pos.y&&posPlayer.y>SWplus.pos.y+h/2)
+        if (fabs(posPlayer.x-SWplus.pos.x)<=(w+SWplus.width)/2&& fabs(posPlayer.y-SWplus.pos.y)<=(h+SWplus.height)/2)
         {
             SWplus.out = false;
             superweapen++;
@@ -469,7 +505,6 @@ void deal()
             score += 5;
         }
     }
-
 	//Stop player
 	if(!move)
 	{
@@ -491,18 +526,17 @@ int work( bool &quit )
 
 	timeoff++;
     }
-    else if(timeoff < 5400){
+    //get special event
+    else if(timeoff < 7200){
     flag = false;
     cleanup( imagePlayer ,imageEnemy);
-	//for(int j = 0; j < 10; j++)
-	//{cleanup(imageBullet[j]);}
 	cleanup( imageBullet, imageenemybullet);
 	Image *text2 = textToImage( "< You died! Your score is: " + std::to_string(score) + ">", 40, (Color){0, 0, 0, 255} );
 	int w,h;
 	getImageSize( text2, w, h );
 	drawImage( text2, SCREEN_WIDTH/2-w/2, SCREEN_HEIGHT/2 - h/2);
     }
-    if (timeoff >= 5400) {
+    if (timeoff >= 7200) {
     flag = false;
     cleanup(  imageEnemy ,imagePlayer);
 	cleanup( imageBullet, imageenemybullet);
@@ -511,11 +545,11 @@ int work( bool &quit )
 	getImageSize( text2, w, h );
 	drawImage( text2, SCREEN_WIDTH/2-w/2, SCREEN_HEIGHT/2 - h/2);
     }
-    if (timeoff == 600) {boss.out = true;}
-    if (timeoff == 2400) {boss.out = true; boss.pos = PointD(SCREEN_WIDTH/4, 0); bossblock = 80; velocityboss = PointD(0.3, 0.7);}
-    if (timeoff == 4200) {boss.out = true; boss.pos = PointD(SCREEN_WIDTH/2, 0); bossblock = 120; velocityboss = PointD(0, 0.5);}
-    //if (bossblock <= 0) {boss.out = false;}
-
+    //boss time!
+    if (timeoff == 1000) {boss.out = true;}
+    if (timeoff == 3000) {boss.out = true; boss.pos = PointD(SCREEN_WIDTH/4, 0); bossblock = 80; velocityboss = PointD(0.3, 0.7);}
+    if (timeoff == 6000) {boss.out = true; boss.pos = PointD(3*SCREEN_WIDTH/4, 0); bossblock = 120; velocityboss = PointD(-0.3, 0.5);}
+    //quit
 	if( keyboard[KEY_ESC] )
 		quit = true;
 	return 0;
@@ -549,10 +583,6 @@ void finale()
 {
 	//Delete all images
 	cleanup( imagePlayer, imageEnemy );
-	//for(int j = 0; j < 10; j++)
-	//{cleanup(imageBullet[j]);}
 	cleanup( imageBullet, imageenemybullet);
-	for( int i = 0; i < imageNumber; ++i )
-		cleanup( images[i] );
 }
 
